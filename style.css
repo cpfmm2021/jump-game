@@ -183,6 +183,29 @@ button:hover {
     margin: 10px;
 }
 
+.bgm-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #444;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+}
+
+.bgm-button:hover {
+    background: #555;
+}
+
+.bgm-button.muted {
+    opacity: 0.5;
+}
+
 /* 모바일 대응 */
 @media (max-width: 800px) {
     .game-container {

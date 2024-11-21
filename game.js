@@ -32,13 +32,33 @@ class Game {
         this.gameTime = 0;
         this.obstacleSpeed = 2.4;  // 3 * 0.8 = 2.4
         
-        // 사운드 초기화
+        // 사운드 설정
         this.sounds = {
             jump: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
             coin: new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'),
             collision: new Audio('https://assets.mixkit.co/active_storage/sfx/2620/2620-preview.mp3'),
             levelComplete: new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3')
         };
+
+        // 배경음악 설정
+        this.bgm = document.getElementById('bgm');
+        this.bgm.volume = 0.5; // 볼륨을 50%로 설정
+        this.bgmButton = document.getElementById('bgmButton');
+        this.isMuted = false;
+
+        // BGM 버튼 이벤트
+        this.bgmButton.addEventListener('click', () => {
+            if (this.isMuted) {
+                this.bgm.play();
+                this.bgmButton.textContent = '';
+                this.bgmButton.classList.remove('muted');
+            } else {
+                this.bgm.pause();
+                this.bgmButton.textContent = '';
+                this.bgmButton.classList.add('muted');
+            }
+            this.isMuted = !this.isMuted;
+        });
 
         // 이벤트 리스너 설정
         this.setupEventListeners();
@@ -124,9 +144,13 @@ class Game {
                 cancelAnimationFrame(this.gameLoop);
                 this.gameLoop = null;
             }
+            this.bgm.pause();
         } else {
             pauseModal.classList.add('hidden');
             this.gameLoop = requestAnimationFrame(() => this.gameStep());
+            if (!this.isMuted) {
+                this.bgm.play();
+            }
         }
         
         pauseButton.textContent = this.isPaused ? '계속하기' : '일시정지';
@@ -325,6 +349,9 @@ class Game {
             cancelAnimationFrame(this.gameLoop);
         }
         this.gameLoop = requestAnimationFrame(() => this.gameStep());
+        this.bgm.play().catch(error => {
+            console.log("Audio autoplay failed:", error);
+        });
     }
 
     levelComplete() {
@@ -369,6 +396,7 @@ class Game {
             cancelAnimationFrame(this.gameLoop);
             this.gameLoop = null;
         }
+        this.bgm.pause();
     }
 
     endGame() {
@@ -380,6 +408,7 @@ class Game {
             cancelAnimationFrame(this.gameLoop);
             this.gameLoop = null;
         }
+        this.bgm.pause();
     }
 }
 

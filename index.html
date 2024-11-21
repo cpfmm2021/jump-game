@@ -9,6 +9,7 @@
 <body>
     <div class="game-container">
         <div class="game-header">
+            <button id="bgmButton" class="bgm-button">🔊</button>
             <div id="level">Level 1</div>
             <div class="progress-container">
                 <div id="progressBar" class="progress-bar"></div>
@@ -21,6 +22,9 @@
         <canvas id="gameCanvas"></canvas>
         
         <button id="startButton">게임 시작</button>
+        <audio id="bgm" loop>
+            <source src="assets/bgm.mp3" type="audio/mp3">
+        </audio>
 
         <!-- 모바일 점프 버튼 -->
         <div id="leftJumpButton" class="jump-button">JUMP</div>
