@@ -19,6 +19,8 @@ class Game {
             height: 40,
             velocityY: 0,
             isJumping: false,
+            jumpCount: 0,
+            maxJumps: 2,
             frame: 0,
             frameCount: 8,
             animationSpeed: 0.2,
@@ -49,9 +51,16 @@ class Game {
     }
 
     jump() {
-        if (!this.player.isJumping) {
+        if (this.player.jumpCount < this.player.maxJumps) {
             this.player.velocityY = -15;
             this.player.isJumping = true;
+            this.player.jumpCount++;
+            
+            // 2단 점프일 때는 조금 더 작은 점프력
+            if (this.player.jumpCount === 2) {
+                this.player.velocityY = -12;
+            }
+            
             this.sounds.jump.currentTime = 0;
             this.sounds.jump.play();
         }
@@ -82,6 +91,7 @@ class Game {
                 this.player.y = this.canvas.height - this.player.height;
                 this.player.velocityY = 0;
                 this.player.isJumping = false;
+                this.player.jumpCount = 0; // 땅에 닿으면 점프 카운트 초기화
             }
 
             // 파워업 생성
@@ -230,6 +240,12 @@ class Game {
             );
         });
 
+        // 점프 카운트 표시
+        this.ctx.fillStyle = '#000';
+        this.ctx.font = '16px Arial';
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText(`남은 점프: ${this.player.maxJumps - this.player.jumpCount}`, this.canvas.width - 10, 30);
+
         // 게임 오버 화면
         if (this.gameOver) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -274,6 +290,8 @@ class Game {
         this.powerups = [];
         this.player.y = this.canvas.height - this.player.height;
         this.player.velocityY = 0;
+        this.player.isJumping = false;
+        this.player.jumpCount = 0;
         this.player.hasShield = false;
         this.gameTime = 0;
         this.difficultyLevel = 1;
