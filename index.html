@@ -8,13 +8,43 @@
 </head>
 <body>
     <div class="game-container">
-        <canvas id="gameCanvas"></canvas>
-        <div class="game-ui">
+        <div class="game-header">
+            <div id="level">Level 1</div>
+            <div class="progress-container">
+                <div id="progressBar" class="progress-bar">
+                    <div id="playerPosition" class="player-position"></div>
+                </div>
+            </div>
             <div id="score">점수: 0</div>
-            <button id="startButton">게임 시작</button>
         </div>
-        <button id="leftJumpButton" class="jump-button">JUMP</button>
-        <button id="rightJumpButton" class="jump-button">JUMP</button>
+
+        <canvas id="gameCanvas"></canvas>
+        
+        <button id="startButton">게임 시작</button>
+        <button id="pauseButton" class="hidden">일시정지</button>
+
+        <!-- 모바일 점프 버튼 -->
+        <div id="leftJumpButton" class="jump-button">JUMP</div>
+        <div id="rightJumpButton" class="jump-button">JUMP</div>
+
+        <!-- 모달 -->
+        <div id="levelCompleteModal" class="modal hidden">
+            <div class="modal-content">
+                <h2>레벨 클리어!</h2>
+                <p>축하합니다! 레벨 <span id="currentLevel">1</span>을 클리어했습니다!</p>
+                <p>점수: <span id="modalScore">0</span></p>
+                <button id="nextLevelButton">다음 레벨</button>
+                <button id="restartButton">처음부터</button>
+            </div>
+        </div>
+
+        <div id="pauseModal" class="modal hidden">
+            <div class="modal-content">
+                <h2>일시 정지</h2>
+                <button id="resumeButton">계속하기</button>
+                <button id="quitButton">그만하기</button>
+            </div>
+        </div>
     </div>
     <script src="game.js"></script>
 </body>

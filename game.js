@@ -3,15 +3,19 @@ class Game {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.gameOver = false;
+        this.isPaused = false;
         this.score = 0;
-        this.gameLoop = null;  // 게임 루프 변수 추가
+        this.level = 1;
+        this.gameLoop = null;
+        this.levelDistance = 5000; // 레벨 완주 거리
+        this.distance = 0; // 현재까지 이동한 거리
         
         // 플레이어 초기화
         this.player = {
-            x: 50,
-            y: this.canvas.height - 50,
-            width: 40,
-            height: 40,
+            x: 40,  // 50 * 0.8 = 40
+            y: this.canvas.height - 40,  // 50 * 0.8 = 40
+            width: 32,  // 40 * 0.8 = 32
+            height: 32,  // 40 * 0.8 = 32
             velocityY: 0,
             isJumping: false,
             jumpCount: 0,
@@ -24,28 +28,52 @@ class Game {
 
         // 게임 요소 초기화
         this.obstacles = [];
-        this.powerups = [];
+        this.coins = [];
         this.gameTime = 0;
-        this.difficultyLevel = 1;
-        this.obstacleSpeed = 5;
-
+        this.obstacleSpeed = 2.4;  // 3 * 0.8 = 2.4
+        
         // 사운드 초기화
         this.sounds = {
             jump: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
+            coin: new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'),
             collision: new Audio('https://assets.mixkit.co/active_storage/sfx/2620/2620-preview.mp3'),
-            powerup: new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3')
+            levelComplete: new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3')
         };
 
         // 이벤트 리스너 설정
-        document.addEventListener('keydown', this.handleKeyDown.bind(this));
-        
-        // 시작 버튼 이벤트 리스너
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+                this.jump();
+            } else if (e.code === 'Escape') {
+                this.togglePause();
+            }
+        });
+
+        // 시작 버튼
         const startButton = document.getElementById('startButton');
         if (startButton) {
             startButton.addEventListener('click', () => this.startGame());
         }
+
+        // 일시정지 버튼
+        const pauseButton = document.getElementById('pauseButton');
+        if (pauseButton) {
+            pauseButton.addEventListener('click', () => this.togglePause());
+        }
+
+        // 모달 버튼들
+        document.getElementById('resumeButton').addEventListener('click', () => this.resumeGame());
+        document.getElementById('quitButton').addEventListener('click', () => this.quitGame());
+        document.getElementById('nextLevelButton').addEventListener('click', () => this.startNextLevel());
+        document.getElementById('restartButton').addEventListener('click', () => this.restartGame());
         
-        // 모바일 점프 버튼 이벤트 리스너
+        // 모바일 점프 버튼
         const leftJumpButton = document.getElementById('leftJumpButton');
         const rightJumpButton = document.getElementById('rightJumpButton');
         
@@ -65,129 +93,133 @@ class Game {
     }
 
     jump() {
-        if (this.player.jumpCount < this.player.maxJumps) {
-            // 각 점프 단계별로 다른 점프력과 효과 적용
-            switch(this.player.jumpCount) {
-                case 0: // 첫 번째 점프
-                    this.player.velocityY = -15;
-                    break;
-                case 1: // 두 번째 점프
-                    this.player.velocityY = -13;
-                    break;
-                case 2: // 세 번째 점프
-                    this.player.velocityY = -11;
-                    break;
-            }
-            
+        if (!this.gameOver && !this.isPaused && this.player.jumpCount < this.player.maxJumps) {
             this.player.isJumping = true;
             this.player.jumpCount++;
             
-            // 점프 효과음 재생 (점프 단계별로 다른 피치)
-            this.sounds.jump.playbackRate = 1 + (this.player.jumpCount * 0.1);
+            // 점프 높이를 점프 횟수에 따라 다르게 설정 (80% 크기로 조정)
+            if (this.player.jumpCount === 1) {
+                this.player.velocityY = -9.6;  // -12 * 0.8
+            } else if (this.player.jumpCount === 2) {
+                this.player.velocityY = -8;    // -10 * 0.8
+            } else if (this.player.jumpCount === 3) {
+                this.player.velocityY = -6.4;  // -8 * 0.8
+            }
+            
             this.sounds.jump.currentTime = 0;
             this.sounds.jump.play();
         }
     }
 
-    handleKeyDown(event) {
-        if (event.code === 'Space' || event.key === ' ') {
-            event.preventDefault();
-            this.jump();
+    togglePause() {
+        if (this.gameOver) return;
+        
+        this.isPaused = !this.isPaused;
+        const pauseModal = document.getElementById('pauseModal');
+        const pauseButton = document.getElementById('pauseButton');
+        
+        if (this.isPaused) {
+            pauseModal.classList.remove('hidden');
+            if (this.gameLoop) {
+                cancelAnimationFrame(this.gameLoop);
+                this.gameLoop = null;
+            }
+        } else {
+            pauseModal.classList.add('hidden');
+            this.gameLoop = requestAnimationFrame(() => this.gameStep());
         }
+        
+        pauseButton.textContent = this.isPaused ? '계속하기' : '일시정지';
     }
 
     update() {
-        if (!this.gameOver) {
-            this.gameTime++;
-            
-            // 난이도 증가
-            if (this.gameTime % 1000 === 0) {
-                this.difficultyLevel++;
-                this.obstacleSpeed += 0.5;
+        if (this.gameOver || this.isPaused) return;
+
+        // 플레이어 업데이트
+        this.player.velocityY += 0.64; // 0.8 * 0.8 = 0.64 (중력 조정)
+        this.player.y += this.player.velocityY;
+
+        // 바닥 충돌 체크
+        if (this.player.y > this.canvas.height - this.player.height) {
+            this.player.y = this.canvas.height - this.player.height;
+            this.player.velocityY = 0;
+            this.player.isJumping = false;
+            this.player.jumpCount = 0;
+        }
+
+        // 거리 업데이트
+        this.distance += this.obstacleSpeed;
+        
+        // 진행률 업데이트
+        const progress = (this.distance / this.levelDistance) * 100;
+        document.getElementById('progressBar').style.width = `${progress}%`;
+        document.getElementById('playerPosition').style.left = `${progress}%`;
+
+        // 레벨 완료 체크
+        if (this.distance >= this.levelDistance) {
+            this.levelComplete();
+            return;
+        }
+
+        // 코인 생성
+        if (Math.random() < 0.02) {
+            const isSpecial = Math.random() < 0.2; // 20% 확률로 특수 코인
+            this.coins.push({
+                x: this.canvas.width,
+                y: Math.random() * (this.canvas.height - 100) + 50,
+                width: 20,
+                height: 20,
+                isSpecial: isSpecial
+            });
+        }
+
+        // 장애물 생성 (더 낮은 빈도)
+        if (Math.random() < 0.005) {
+            this.obstacles.push({
+                x: this.canvas.width,
+                y: this.canvas.height - 30,
+                width: 30,
+                height: Math.random() * 60 + 30 // 더 낮은 높이
+            });
+        }
+
+        // 코인 업데이트
+        for (let i = this.coins.length - 1; i >= 0; i--) {
+            const coin = this.coins[i];
+            coin.x -= this.obstacleSpeed;
+
+            // 코인 충돌 체크
+            if (this.checkCollision(this.player, coin)) {
+                this.coins.splice(i, 1);
+                this.score += coin.isSpecial ? 50 : 10;
+                document.getElementById('score').textContent = `점수: ${this.score}`;
+                this.sounds.coin.currentTime = 0;
+                this.sounds.coin.play();
+                continue;
             }
 
-            // 플레이어 업데이트
-            this.player.velocityY += 0.8;
-            this.player.y += this.player.velocityY;
-            this.player.frame = (this.player.frame + this.player.animationSpeed) % this.player.frameCount;
+            // 화면 밖으로 나간 코인 제거
+            if (coin.x + coin.width < 0) {
+                this.coins.splice(i, 1);
+            }
+        }
 
-            if (this.player.y > this.canvas.height - this.player.height) {
-                this.player.y = this.canvas.height - this.player.height;
-                this.player.velocityY = 0;
-                this.player.isJumping = false;
-                this.player.jumpCount = 0; // 땅에 닿으면 점프 카운트 초기화
+        // 장애물 업데이트
+        for (let i = this.obstacles.length - 1; i >= 0; i--) {
+            const obstacle = this.obstacles[i];
+            obstacle.x -= this.obstacleSpeed;
+
+            // 장애물 충돌 체크
+            if (this.checkCollision(this.player, obstacle)) {
+                this.sounds.collision.play();
+                this.gameOver = true;
+                this.endGame();
+                return;
             }
 
-            // 파워업 생성
-            if (Math.random() < 0.002) {
-                this.powerups.push({
-                    x: this.canvas.width,
-                    y: Math.random() * (this.canvas.height - 100),
-                    width: 20,
-                    height: 20,
-                    type: 'shield'
-                });
-            }
-
-            // 파워업 업데이트
-            for (let i = this.powerups.length - 1; i >= 0; i--) {
-                const powerup = this.powerups[i];
-                powerup.x -= this.obstacleSpeed * 0.7;
-
-                // 파워업 충돌 체크
-                if (this.checkCollision(this.player, powerup)) {
-                    if (powerup.type === 'shield') {
-                        this.player.hasShield = true;
-                        setTimeout(() => { this.player.hasShield = false; }, 5000);
-                        this.sounds.powerup.play();
-                    }
-                    this.powerups.splice(i, 1);
-                }
-
-                if (powerup.x + powerup.width < 0) {
-                    this.powerups.splice(i, 1);
-                }
-            }
-
-            // 장애물 생성
-            if (Math.random() < 0.02) {
-                const obstacleTypes = [
-                    { width: 20, height: 30, speed: this.obstacleSpeed },
-                    { width: 30, height: 40, speed: this.obstacleSpeed * 1.2 },
-                    { width: 15, height: 50, speed: this.obstacleSpeed * 0.8 }
-                ];
-                
-                const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
-                
-                this.obstacles.push({
-                    x: this.canvas.width,
-                    y: this.canvas.height - type.height,
-                    width: type.width,
-                    height: type.height,
-                    speed: type.speed
-                });
-            }
-
-            // 장애물 업데이트
-            for (let i = this.obstacles.length - 1; i >= 0; i--) {
-                const obstacle = this.obstacles[i];
-                obstacle.x -= obstacle.speed;
-
-                if (this.checkCollision(this.player, obstacle)) {
-                    if (this.player.hasShield) {
-                        this.obstacles.splice(i, 1);
-                        continue;
-                    }
-                    this.sounds.collision.play();
-                    this.gameOver = true;
-                    this.endGame();
-                }
-
-                if (obstacle.x + obstacle.width < 0) {
-                    this.obstacles.splice(i, 1);
-                    this.score++;
-                    document.getElementById('score').textContent = `점수: ${this.score}`;
-                }
+            // 화면 밖으로 나간 장애물 제거
+            if (obstacle.x + obstacle.width < 0) {
+                this.obstacles.splice(i, 1);
             }
         }
     }
@@ -199,38 +231,12 @@ class Game {
         this.ctx.fillStyle = '#87CEEB';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // 구름 그리기
-        this.ctx.fillStyle = '#fff';
-        this.ctx.beginPath();
-        this.ctx.arc(100, 50, 20, 0, Math.PI * 2);
-        this.ctx.arc(130, 50, 20, 0, Math.PI * 2);
-        this.ctx.arc(115, 40, 20, 0, Math.PI * 2);
-        this.ctx.fill();
-
         // 땅 그리기
         this.ctx.fillStyle = '#8B4513';
         this.ctx.fillRect(0, this.canvas.height - 20, this.canvas.width, 20);
 
         // 플레이어 그리기
-        this.ctx.save();
-        if (this.player.hasShield) {
-            this.ctx.shadowColor = '#00f';
-            this.ctx.shadowBlur = 20;
-        }
-
-        // 점프 단계에 따른 플레이어 색상 변화
-        switch(this.player.jumpCount) {
-            case 0:
-                this.ctx.fillStyle = '#00f'; // 기본 파란색
-                break;
-            case 1:
-                this.ctx.fillStyle = '#4169E1'; // 로얄 블루
-                break;
-            case 2:
-                this.ctx.fillStyle = '#1E90FF'; // 밝은 파란색
-                break;
-        }
-
+        this.ctx.fillStyle = '#00f';
         this.ctx.fillRect(
             this.player.x,
             this.player.y,
@@ -238,29 +244,14 @@ class Game {
             this.player.height
         );
 
-        // 플레이어 눈과 입 그리기
-        this.ctx.fillStyle = '#fff';
-        this.ctx.fillRect(
-            this.player.x + this.player.width * 0.6,
-            this.player.y + this.player.height * 0.3,
-            5, 5
-        );
-        this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(
-            this.player.x + this.player.width * 0.4,
-            this.player.y + this.player.height * 0.6,
-            15, 3
-        );
-        this.ctx.restore();
-
-        // 파워업 그리기
-        this.powerups.forEach(powerup => {
-            this.ctx.fillStyle = '#ff0';
+        // 코인 그리기
+        this.coins.forEach(coin => {
+            this.ctx.fillStyle = coin.isSpecial ? '#FFD700' : '#FFA500';
             this.ctx.beginPath();
             this.ctx.arc(
-                powerup.x + powerup.width / 2,
-                powerup.y + powerup.height / 2,
-                powerup.width / 2,
+                coin.x + coin.width/2,
+                coin.y + coin.height/2,
+                coin.width/2,
                 0,
                 Math.PI * 2
             );
@@ -268,8 +259,8 @@ class Game {
         });
 
         // 장애물 그리기
+        this.ctx.fillStyle = '#FF4444';
         this.obstacles.forEach(obstacle => {
-            this.ctx.fillStyle = `hsl(${obstacle.height * 5}, 70%, 50%)`;
             this.ctx.fillRect(
                 obstacle.x,
                 obstacle.y,
@@ -277,93 +268,112 @@ class Game {
                 obstacle.height
             );
         });
-
-        // 점프 카운트 표시 (시각적 개선)
-        this.ctx.fillStyle = '#000';
-        this.ctx.font = '16px Arial';
-        this.ctx.textAlign = 'right';
-        let jumpText = '점프: ';
-        for(let i = 0; i < this.player.maxJumps; i++) {
-            jumpText += i < this.player.jumpCount ? '○' : '●';
-        }
-        this.ctx.fillText(jumpText, this.canvas.width - 10, 30);
-
-        // 게임 오버 화면
-        if (this.gameOver) {
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            
-            this.ctx.fillStyle = '#fff';
-            this.ctx.font = '48px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText('게임 오버!', this.canvas.width / 2, this.canvas.height / 2 - 50);
-            
-            this.ctx.font = '24px Arial';
-            this.ctx.fillText(`최종 점수: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2 + 10);
-            this.ctx.fillText('스페이스바를 눌러 다시 시작', this.canvas.width / 2, this.canvas.height / 2 + 50);
-        }
-
-        // 난이도 표시
-        this.ctx.fillStyle = '#000';
-        this.ctx.font = '20px Arial';
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText(`난이도: ${this.difficultyLevel}`, 10, 30);
     }
 
-    checkCollision(player, object) {
-        return player.x < object.x + object.width &&
-               player.x + player.width > object.x &&
-               player.y < object.y + object.height &&
-               player.y + player.height > object.y;
+    checkCollision(a, b) {
+        return a.x < b.x + b.width &&
+               a.x + a.width > b.x &&
+               a.y < b.y + b.height &&
+               a.y + a.height > b.y;
+    }
+
+    gameStep() {
+        this.update();
+        this.draw();
+        if (!this.gameOver && !this.isPaused) {
+            this.gameLoop = requestAnimationFrame(() => this.gameStep());
+        }
     }
 
     startGame() {
         // 게임 상태 초기화
         this.gameOver = false;
+        this.isPaused = false;
         this.score = 0;
+        this.distance = 0;
         this.obstacles = [];
-        this.powerups = [];
+        this.coins = [];
         this.player.y = this.canvas.height - this.player.height;
         this.player.velocityY = 0;
         this.player.isJumping = false;
         this.player.jumpCount = 0;
         this.player.hasShield = false;
-        this.gameTime = 0;
-        this.difficultyLevel = 1;
-        this.obstacleSpeed = 5;
+        
+        // UI 업데이트
         document.getElementById('score').textContent = '점수: 0';
+        document.getElementById('level').textContent = `Level ${this.level}`;
+        document.getElementById('startButton').classList.add('hidden');
+        document.getElementById('pauseButton').classList.remove('hidden');
+        document.getElementById('progressBar').style.width = '0%';
+        document.getElementById('playerPosition').style.left = '0%';
 
-        // 이전 게임 루프가 있다면 중지
+        // 게임 루프 시작
         if (this.gameLoop) {
             cancelAnimationFrame(this.gameLoop);
         }
-
-        // 새로운 게임 루프 시작
-        const gameLoop = () => {
-            if (!this.gameOver) {
-                this.update();
-                this.draw();
-                this.gameLoop = requestAnimationFrame(gameLoop);
-            }
-        };
-        gameLoop();
+        this.gameLoop = requestAnimationFrame(() => this.gameStep());
     }
 
-    endGame() {
-        this.gameOver = true;
+    levelComplete() {
+        this.sounds.levelComplete.play();
         if (this.gameLoop) {
             cancelAnimationFrame(this.gameLoop);
             this.gameLoop = null;
         }
-        document.getElementById('startButton').style.display = 'block';
+        
+        document.getElementById('currentLevel').textContent = this.level;
+        document.getElementById('modalScore').textContent = this.score;
+        document.getElementById('levelCompleteModal').classList.remove('hidden');
+    }
+
+    startNextLevel() {
+        this.level++;
+        this.levelDistance += 1000; // 다음 레벨은 더 긴 거리
+        this.obstacleSpeed += 0.5; // 속도 약간 증가
+        document.getElementById('levelCompleteModal').classList.add('hidden');
+        this.startGame();
+    }
+
+    restartGame() {
+        this.level = 1;
+        this.levelDistance = 5000;
+        this.obstacleSpeed = 3;
+        document.getElementById('levelCompleteModal').classList.add('hidden');
+        this.startGame();
+    }
+
+    resumeGame() {
+        this.togglePause();
+    }
+
+    quitGame() {
+        this.gameOver = true;
+        this.isPaused = false;
+        document.getElementById('pauseModal').classList.add('hidden');
+        document.getElementById('startButton').classList.remove('hidden');
+        document.getElementById('pauseButton').classList.add('hidden');
+        if (this.gameLoop) {
+            cancelAnimationFrame(this.gameLoop);
+            this.gameLoop = null;
+        }
+    }
+
+    endGame() {
+        this.gameOver = true;
+        document.getElementById('startButton').classList.remove('hidden');
+        document.getElementById('pauseButton').classList.add('hidden');
         document.getElementById('startButton').textContent = '다시 시작';
+        if (this.gameLoop) {
+            cancelAnimationFrame(this.gameLoop);
+            this.gameLoop = null;
+        }
     }
 }
 
 // 게임 인스턴스 생성
 window.onload = () => {
     const canvas = document.getElementById('gameCanvas');
-    canvas.width = 800;
-    canvas.height = 400;
+    canvas.width = 640;  // 800 * 0.8 = 640
+    canvas.height = 320; // 400 * 0.8 = 320
     new Game(canvas);
 };
