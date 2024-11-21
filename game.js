@@ -20,7 +20,7 @@ class Game {
             velocityY: 0,
             isJumping: false,
             jumpCount: 0,
-            maxJumps: 2,
+            maxJumps: 3,
             frame: 0,
             frameCount: 8,
             animationSpeed: 0.2,
@@ -52,15 +52,24 @@ class Game {
 
     jump() {
         if (this.player.jumpCount < this.player.maxJumps) {
-            this.player.velocityY = -15;
+            // 각 점프 단계별로 다른 점프력과 효과 적용
+            switch(this.player.jumpCount) {
+                case 0: // 첫 번째 점프
+                    this.player.velocityY = -15;
+                    break;
+                case 1: // 두 번째 점프
+                    this.player.velocityY = -13;
+                    break;
+                case 2: // 세 번째 점프
+                    this.player.velocityY = -11;
+                    break;
+            }
+            
             this.player.isJumping = true;
             this.player.jumpCount++;
             
-            // 2단 점프일 때는 조금 더 작은 점프력
-            if (this.player.jumpCount === 2) {
-                this.player.velocityY = -12;
-            }
-            
+            // 점프 효과음 재생 (점프 단계별로 다른 피치)
+            this.sounds.jump.playbackRate = 1 + (this.player.jumpCount * 0.1);
             this.sounds.jump.currentTime = 0;
             this.sounds.jump.play();
         }
@@ -193,13 +202,27 @@ class Game {
             this.ctx.shadowColor = '#00f';
             this.ctx.shadowBlur = 20;
         }
-        this.ctx.fillStyle = '#00f';
+
+        // 점프 단계에 따른 플레이어 색상 변화
+        switch(this.player.jumpCount) {
+            case 0:
+                this.ctx.fillStyle = '#00f'; // 기본 파란색
+                break;
+            case 1:
+                this.ctx.fillStyle = '#4169E1'; // 로얄 블루
+                break;
+            case 2:
+                this.ctx.fillStyle = '#1E90FF'; // 밝은 파란색
+                break;
+        }
+
         this.ctx.fillRect(
             this.player.x,
             this.player.y,
             this.player.width,
             this.player.height
         );
+
         // 플레이어 눈과 입 그리기
         this.ctx.fillStyle = '#fff';
         this.ctx.fillRect(
@@ -240,11 +263,15 @@ class Game {
             );
         });
 
-        // 점프 카운트 표시
+        // 점프 카운트 표시 (시각적 개선)
         this.ctx.fillStyle = '#000';
         this.ctx.font = '16px Arial';
         this.ctx.textAlign = 'right';
-        this.ctx.fillText(`남은 점프: ${this.player.maxJumps - this.player.jumpCount}`, this.canvas.width - 10, 30);
+        let jumpText = '점프: ';
+        for(let i = 0; i < this.player.maxJumps; i++) {
+            jumpText += i < this.player.jumpCount ? '○' : '●';
+        }
+        this.ctx.fillText(jumpText, this.canvas.width - 10, 30);
 
         // 게임 오버 화면
         if (this.gameOver) {
