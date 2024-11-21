@@ -1,17 +1,11 @@
 class Game {
-    constructor() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = 800;
-        this.canvas.height = 400;
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.gameOver = false;
+        this.score = 0;
         
-        // 사운드 초기화
-        this.sounds = {
-            jump: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
-            powerup: new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'),
-            hit: new Audio('https://assets.mixkit.co/active_storage/sfx/2620/2620-preview.mp3')
-        };
-        
+        // 플레이어 초기화
         this.player = {
             x: 50,
             y: this.canvas.height - 50,
@@ -26,28 +20,41 @@ class Game {
             animationSpeed: 0.2,
             hasShield: false
         };
-        
-        this.powerups = [];
+
+        // 게임 요소 초기화
         this.obstacles = [];
-        this.score = 0;
-        this.gameOver = false;
-        this.gameLoop = null;
-        this.obstacleSpeed = 5;
+        this.powerups = [];
         this.gameTime = 0;
         this.difficultyLevel = 1;
-        
-        document.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        document.getElementById('startButton').addEventListener('click', () => this.startGame());
+        this.obstacleSpeed = 5;
+
+        // 사운드 초기화
+        this.sounds = {
+            jump: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
+            collision: new Audio('https://assets.mixkit.co/active_storage/sfx/2620/2620-preview.mp3'),
+            powerup: new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3')
+        };
+
+        // 이벤트 리스너 설정
+        document.addEventListener('keydown', this.handleKeyDown.bind(this));
         
         // 모바일 점프 버튼 이벤트 리스너
-        document.getElementById('leftJumpButton').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.jump();
-        });
-        document.getElementById('rightJumpButton').addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.jump();
-        });
+        const leftJumpButton = document.getElementById('leftJumpButton');
+        const rightJumpButton = document.getElementById('rightJumpButton');
+        
+        if (leftJumpButton) {
+            leftJumpButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.jump();
+            });
+        }
+        
+        if (rightJumpButton) {
+            rightJumpButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.jump();
+            });
+        }
     }
 
     jump() {
@@ -77,6 +84,7 @@ class Game {
 
     handleKeyDown(event) {
         if (event.code === 'Space' || event.key === ' ') {
+            event.preventDefault();
             this.jump();
         }
     }
@@ -163,7 +171,7 @@ class Game {
                         this.obstacles.splice(i, 1);
                         continue;
                     }
-                    this.sounds.hit.play();
+                    this.sounds.collision.play();
                     this.gameOver = true;
                     this.endGame();
                 }
@@ -337,5 +345,8 @@ class Game {
 
 // 게임 인스턴스 생성
 window.onload = () => {
-    new Game();
+    const canvas = document.getElementById('gameCanvas');
+    canvas.width = 800;
+    canvas.height = 400;
+    new Game(canvas);
 };
