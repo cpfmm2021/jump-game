@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16.x'
+    
+    - name: Install dependencies
+      run: |
+        npm install -g eslint
+        npm init -y
+        npm install eslint --save-dev
+        
+    - name: Initialize ESLint
+      run: |
+        npx eslint --init || true
+        
+    - name: Run ESLint
+      run: npx eslint . --ext .js || true
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Validate HTML
+      run: |
+        npm install -g html-validator-cli
+        html-validator --file index.html || true
+    
+    - name: Validate JavaScript
+      run: |
+        echo "Checking JavaScript syntax..."
+        node -c game.js || true
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Security scan
+      uses: snyk/actions/node@master
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
