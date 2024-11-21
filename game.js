@@ -1,38 +1,48 @@
 class Game {
-    constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        
+        // 캔버스 크기 설정
+        this.canvas.width = 640;
+        this.canvas.height = 320;
+
+        // 게임 상태
         this.gameOver = false;
         this.isPaused = false;
         this.score = 0;
         this.level = 1;
+        this.currentStage = 1;
+        this.onStageClear = null;
+        this.targetScore = 100;
         this.gameLoop = null;
-        this.levelDistance = 5000; // 레벨 완주 거리
-        this.distance = 0; // 현재까지 이동한 거리
+        this.levelDistance = 5000;
+        this.distance = 0;
         
         // 플레이어 초기화
         this.player = {
-            x: 40,  // 50 * 0.8 = 40
-            y: this.canvas.height - 40,  // 50 * 0.8 = 40
-            width: 32,  // 40 * 0.8 = 32
-            height: 32,  // 40 * 0.8 = 32
+            x: 40,
+            y: this.canvas.height - 40,
+            width: 30,
+            height: 30,
             velocityY: 0,
             isJumping: false,
             jumpCount: 0,
-            maxJumps: 3,
-            frame: 0,
-            frameCount: 8,
-            animationSpeed: 0.2,
-            hasShield: false
+            maxJumps: 3
         };
 
-        // 게임 요소 초기화
+        // 장애물 초기화
         this.obstacles = [];
+        this.obstacleSpeed = 5;
+        this.obstacleTimer = 0;
+        this.obstacleInterval = 60;
+
+        // 코인 초기화
         this.coins = [];
-        this.gameTime = 0;
-        this.obstacleSpeed = 2.4;  // 3 * 0.8 = 2.4
-        
-        // 사운드 설정
+        this.coinTimer = 0;
+        this.coinInterval = 45;
+
+        // 사운드 초기화
         this.sounds = {
             jump: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
             coin: new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'),
@@ -63,6 +73,12 @@ class Game {
 
         // 이벤트 리스너 설정
         this.setupEventListeners();
+
+        // 시작 버튼 이벤트 리스너
+        document.getElementById('startButton').addEventListener('click', () => {
+            document.getElementById('startButton').style.display = 'none';
+            this.startGame();
+        });
     }
 
     setupEventListeners() {
@@ -217,10 +233,7 @@ class Game {
             // 코인 충돌 체크
             if (this.checkCollision(this.player, coin)) {
                 this.coins.splice(i, 1);
-                this.score += coin.isSpecial ? 50 : 10;
-                document.getElementById('score').textContent = `점수: ${this.score}`;
-                this.sounds.coin.currentTime = 0;
-                this.sounds.coin.play();
+                this.updateScore(coin.isSpecial ? 50 : 10);
                 continue;
             }
 
@@ -359,12 +372,22 @@ class Game {
         this.sounds.levelComplete.play();
         if (this.gameLoop) {
             cancelAnimationFrame(this.gameLoop);
-            this.gameLoop = null;
         }
-        
-        document.getElementById('currentLevel').textContent = this.level;
-        document.getElementById('modalScore').textContent = this.score;
-        document.getElementById('levelCompleteModal').classList.remove('hidden');
+
+        // 스테이지 클리어 처리
+        if (this.onStageClear) {
+            this.onStageClear();
+        }
+
+        // 홈 화면으로 돌아가기
+        setTimeout(() => {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('homeScreen').classList.remove('hidden');
+            // 홈 스크린 새로고침
+            window.homeScreen.loadClearedStage();
+            window.homeScreen.stagesContainer.innerHTML = '';
+            window.homeScreen.createStageButtons();
+        }, 1500);
     }
 
     startNextLevel() {
@@ -411,12 +434,19 @@ class Game {
         }
         this.bgm.pause();
     }
+
+    updateScore(points) {
+        this.score += points;
+        document.getElementById('score').textContent = `점수: ${this.score}`;
+        
+        // 목표 점수 달성시 스테이지 클리어
+        if (this.score >= this.targetScore) {
+            this.levelComplete();
+        }
+    }
 }
 
 // 게임 인스턴스 생성
 window.onload = () => {
-    const canvas = document.getElementById('gameCanvas');
-    canvas.width = 640;  // 800 * 0.8 = 640
-    canvas.height = 320; // 400 * 0.8 = 320
-    new Game(canvas);
+    new Game();
 };
