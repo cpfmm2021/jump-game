@@ -42,6 +42,7 @@ class Game {
 
         // 배경음악 설정
         this.bgm = document.getElementById('bgm');
+        this.bgm.src = 'https://assets.mixkit.co/music/preview/mixkit-game-show-fun-642.mp3';
         this.bgm.volume = 0.5; // 볼륨을 50%로 설정
         this.bgmButton = document.getElementById('bgmButton');
         this.isMuted = false;
