@@ -67,7 +67,7 @@ class Game {
     }
 
     handleKeyDown(event) {
-        if ((event.code === 'Space' || event.key === ' ') && !this.player.isJumping) {
+        if (event.code === 'Space' || event.key === ' ') {
             this.jump();
         }
     }
