@@ -4,6 +4,7 @@ class Game {
         this.ctx = canvas.getContext('2d');
         this.gameOver = false;
         this.score = 0;
+        this.gameLoop = null;  // 게임 루프 변수 추가
         
         // 플레이어 초기화
         this.player = {
@@ -37,6 +38,12 @@ class Game {
 
         // 이벤트 리스너 설정
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        
+        // 시작 버튼 이벤트 리스너
+        const startButton = document.getElementById('startButton');
+        if (startButton) {
+            startButton.addEventListener('click', () => this.startGame());
+        }
         
         // 모바일 점프 버튼 이벤트 리스너
         const leftJumpButton = document.getElementById('leftJumpButton');
@@ -310,15 +317,8 @@ class Game {
                player.y + player.height > object.y;
     }
 
-    gameStep() {
-        if (!this.gameOver) {
-            this.update();
-            this.draw();
-            requestAnimationFrame(() => this.gameStep());
-        }
-    }
-
     startGame() {
+        // 게임 상태 초기화
         this.gameOver = false;
         this.score = 0;
         this.obstacles = [];
@@ -332,12 +332,29 @@ class Game {
         this.difficultyLevel = 1;
         this.obstacleSpeed = 5;
         document.getElementById('score').textContent = '점수: 0';
-        document.getElementById('startButton').style.display = 'none';
-        this.gameStep();
+
+        // 이전 게임 루프가 있다면 중지
+        if (this.gameLoop) {
+            cancelAnimationFrame(this.gameLoop);
+        }
+
+        // 새로운 게임 루프 시작
+        const gameLoop = () => {
+            if (!this.gameOver) {
+                this.update();
+                this.draw();
+                this.gameLoop = requestAnimationFrame(gameLoop);
+            }
+        };
+        gameLoop();
     }
 
     endGame() {
         this.gameOver = true;
+        if (this.gameLoop) {
+            cancelAnimationFrame(this.gameLoop);
+            this.gameLoop = null;
+        }
         document.getElementById('startButton').style.display = 'block';
         document.getElementById('startButton').textContent = '다시 시작';
     }
