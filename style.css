@@ -45,3 +45,40 @@ body {
 #startButton:hover {
     background-color: #45a049;
 }
+
+.jump-button {
+    position: absolute;
+    bottom: 20px;
+    width: 80px;
+    height: 80px;
+    font-size: 16px;
+    background-color: rgba(76, 175, 80, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 1000;
+}
+
+#leftJumpButton {
+    left: 20px;
+}
+
+#rightJumpButton {
+    right: 20px;
+}
+
+.jump-button:active {
+    background-color: rgba(69, 160, 73, 0.9);
+    transform: scale(0.95);
+}
+
+/* 데스크톱에서는 점프 버튼 숨기기 */
+@media (min-width: 1024px) {
+    .jump-button {
+        display: none;
+    }
+}

@@ -36,14 +36,30 @@ class Game {
         
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
         document.getElementById('startButton').addEventListener('click', () => this.startGame());
+        
+        // 모바일 점프 버튼 이벤트 리스너
+        document.getElementById('leftJumpButton').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.jump();
+        });
+        document.getElementById('rightJumpButton').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.jump();
+        });
     }
 
-    handleKeyDown(event) {
-        if ((event.code === 'Space' || event.key === ' ') && !this.player.isJumping) {
+    jump() {
+        if (!this.player.isJumping) {
             this.player.velocityY = -15;
             this.player.isJumping = true;
             this.sounds.jump.currentTime = 0;
             this.sounds.jump.play();
+        }
+    }
+
+    handleKeyDown(event) {
+        if ((event.code === 'Space' || event.key === ' ') && !this.player.isJumping) {
+            this.jump();
         }
     }
 
