@@ -97,13 +97,13 @@ class Game {
             this.player.isJumping = true;
             this.player.jumpCount++;
             
-            // 점프 높이를 점프 횟수에 따라 다르게 설정 (80% 크기로 조정)
+            // 점프 높이를 점프 횟수에 따라 다르게 설정
             if (this.player.jumpCount === 1) {
-                this.player.velocityY = -9.6;  // -12 * 0.8
+                this.player.velocityY = -10;    // 100%
             } else if (this.player.jumpCount === 2) {
-                this.player.velocityY = -8;    // -10 * 0.8
+                this.player.velocityY = -9;     // 90%
             } else if (this.player.jumpCount === 3) {
-                this.player.velocityY = -6.4;  // -8 * 0.8
+                this.player.velocityY = -8;     // 80%
             }
             
             this.sounds.jump.currentTime = 0;
@@ -136,7 +136,7 @@ class Game {
         if (this.gameOver || this.isPaused) return;
 
         // 플레이어 업데이트
-        this.player.velocityY += 0.64; // 0.8 * 0.8 = 0.64 (중력 조정)
+        this.player.velocityY += 0.5; // 중력 조정
         this.player.y += this.player.velocityY;
 
         // 바닥 충돌 체크
@@ -163,10 +163,11 @@ class Game {
 
         // 코인 생성
         if (Math.random() < 0.02) {
-            const isSpecial = Math.random() < 0.2; // 20% 확률로 특수 코인
+            const isSpecial = Math.random() < 0.1; // 10% 확률로 특수 코인
+            const maxJumpHeight = this.canvas.height - 160; // 플레이어가 도달할 수 있는 최대 높이
             this.coins.push({
                 x: this.canvas.width,
-                y: Math.random() * (this.canvas.height - 100) + 50,
+                y: Math.random() * (this.canvas.height - maxJumpHeight) + maxJumpHeight,
                 width: 20,
                 height: 20,
                 isSpecial: isSpecial
@@ -246,6 +247,7 @@ class Game {
 
         // 코인 그리기
         this.coins.forEach(coin => {
+            // 코인 원 그리기
             this.ctx.fillStyle = coin.isSpecial ? '#FFD700' : '#FFA500';
             this.ctx.beginPath();
             this.ctx.arc(
@@ -256,6 +258,17 @@ class Game {
                 Math.PI * 2
             );
             this.ctx.fill();
+
+            // 코인 점수 텍스트 그리기
+            this.ctx.fillStyle = '#000';
+            this.ctx.font = '10px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(
+                coin.isSpecial ? '50' : '10',
+                coin.x + coin.width/2,
+                coin.y + coin.height/2
+            );
         });
 
         // 장애물 그리기
